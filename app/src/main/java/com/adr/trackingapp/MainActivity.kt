@@ -1,13 +1,22 @@
 package com.adr.trackingapp
 
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
-import android.util.Property
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.adr.trackingapp.BuildConfig.ACCESS_TOKEN
 import com.mapbox.android.core.location.*
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
@@ -29,26 +38,38 @@ import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerPlugin
 import com.mapbox.mapboxsdk.style.layers.LineLayer
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory
-import com.mapbox.mapboxsdk.style.layers.PropertyValue
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfMeasurement
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.alert_dialog_description.*
 import java.lang.ref.WeakReference
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.sql.Time
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.TimeUnit
+import kotlin.collections.ArrayList
 
 class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallback, OnCameraTrackingChangedListener {
 
     private lateinit var mapView: MapView
-    lateinit var map: MapboxMap
     private lateinit var permissionManager: PermissionsManager
     private lateinit var originLocation: Location
     private lateinit var locationComponent: LocationComponent
-    private var isInTrackingMode = false
 
+    private var isInTrackingMode = false
     private var locationEngine: LocationEngine? = null
     private var locationLayerPlugin: LocationLayerPlugin? = null
-    var arrayCoordinate: ArrayList<Point> = ArrayList()
     private val callback = MainActivityCallback(this)
+    private var historyTotalDistance = 0.0
+    private var startTime = 0L
+    private var stopTime = 0L
+//    private var intervalString = ""
+
+    var arrayCoordinate: ArrayList<Point> = ArrayList()
+    lateinit var map: MapboxMap
 
     companion object {
         private const val INTERVAL_MILIS = 5000L
@@ -57,7 +78,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Mapbox.getInstance(this, "pk.eyJ1IjoiYWRpdHlhZHIiLCJhIjoiY2s3dHd4ZTJuMTQ5YTNtcjJ5cnZ2anB4YyJ9.j2rKwfs-x2Qe7j3UYqX8HA")
+        Mapbox.getInstance(this, ACCESS_TOKEN)
         setContentView(R.layout.activity_main)
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
@@ -67,6 +88,41 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 //                //map is setup, and the style has loaded. now you can add data or make other map adjustment
 //            }
 //        }
+
+        btn_start_service.setOnClickListener {
+            initLocationEngine()
+            startTime = Calendar.getInstance().timeInMillis
+            Toast.makeText(this, "current date is ${getCurrentDate()}", Toast.LENGTH_SHORT).show()
+        }
+
+        btn_finish.setOnClickListener {
+            //TODO alert dialog untuk ngasih title running nya
+            //TODO store data to room sql
+            //TODO data yang ada di dalam sql : KM, description, gambar (possible), current date, average speed
+            
+            alertDialogSaveData()
+            captureScreenshot(findViewById(R.id.mapView))
+            stopTime = Calendar.getInstance().timeInMillis
+
+            val time = intervalTime(startTime, stopTime)
+            val averageSpeed = getAverageSpeed(historyTotalDistance / 1000, time)
+//            Toast.makeText(this, "interval time = $interval seconds", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        val menuInflater = menuInflater
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId){
+            R.id.history -> {
+                startActivity(Intent(this, HistoryRunningActivity::class.java))
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onMapReady(mapboxMap: MapboxMap) {
@@ -77,18 +133,8 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
             fab_mainactivity.setOnClickListener {
 //                Toast.makeText(this, "testing click", Toast.LENGTH_SHORT).show()
-                testing()
+                drawLine()
             }
-//            it.addSource(GeoJsonSource("line-source", FeatureCollection.fromFeatures(
-//                arrayOf(Feature.fromGeometry(LineString.fromLngLats(arrayCoordinate))))))
-//
-//            it.addLayer(LineLayer("linelayer", "line-source").withProperties(
-//                PropertyFactory.lineDasharray(arrayOf(0.01f, 2f)),
-//                PropertyFactory.lineCap(com.mapbox.mapboxsdk.style.layers.Property.LINE_CAP_ROUND),
-//                PropertyFactory.lineJoin(com.mapbox.mapboxsdk.style.layers.Property.LINE_JOIN_ROUND),
-//                PropertyFactory.lineWidth(5f),
-//                PropertyFactory.lineColor(Color.RED)
-//            ))
 
     //            style.addLayer(
     //                LineLayer("linelayer", "line-source").withProperties(
@@ -113,7 +159,65 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 //        { enableLocationComponent(it) }
     }
 
-    private fun testing(){
+    private fun alertDialogSaveData(){
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("SAVE DATA")
+        builder.setMessage("Do you want to save running data?")
+        builder.setCancelable(true)
+
+        builder.setPositiveButton("YES"){ _, _ -> alertDialogDescription() }
+        builder.setNegativeButton("NO"){ dialog, _ -> dialog.cancel() }
+
+        val alertDialog = builder.create()
+        alertDialog.show()
+    }
+
+    private fun alertDialogDescription(){
+        val builder = AlertDialog.Builder(this)
+        val inflater = layoutInflater
+        val dialogView = inflater.inflate(R.layout.alert_dialog_description, null)
+        builder.setView(dialogView)
+        builder.setCancelable(true)
+//
+//        builder.setPositiveButton("SAVE"){ _, _ ->
+//            //TODO save data to room sql
+//            val description = et_alert_dialog_description.text.toString()
+//        }
+//        builder.setNegativeButton("CANCEL"){ dialog, _ -> dialog.cancel() }
+
+        val alertDialog = builder.create()
+        alertDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        alertDialog.show()
+    }
+
+    private fun captureScreenshot(view: View): Bitmap {
+        //TODO find method that aren't deprecated
+        view.isDrawingCacheEnabled = true
+        view.buildDrawingCache(true)
+        val bitmapRaw = Bitmap.createBitmap(view.drawingCache)
+        val bitmapCropped = Bitmap.createBitmap(bitmapRaw,0,0,60,40)
+        view.isDrawingCacheEnabled = false
+        return bitmapCropped
+        //TODO need test
+    }
+
+    private fun intervalTime(startTime: Long, stopTime: Long): Double{
+        val intervalMilis = stopTime - startTime
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(intervalMilis)
+        return seconds.toDouble()
+    }
+
+    private fun getAverageSpeed(distanceInMeter: Double, timeInSecond: Double): Double{
+        return distanceInMeter / timeInSecond
+    }
+
+    private fun getCurrentDate(): String{
+        val test = Calendar.getInstance().time
+        val formatter = SimpleDateFormat.getDateInstance(3)
+        return formatter.format(test)
+    }
+
+    private fun drawLine(){
         map.setStyle(Style.MAPBOX_STREETS){
             it.addSource(GeoJsonSource("line-source", FeatureCollection.fromFeatures(
                 arrayOf(Feature.fromGeometry(LineString.fromLngLats(arrayCoordinate))))))
@@ -129,19 +233,17 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
             var distance = 0.0
             var totalDistance = 0.0
 
-            if (arrayCoordinateSize >= 2){
-                for (i in 0 until arrayCoordinateSize){
+            if (arrayCoordinateSize > 2){
+                for (i in 0 until arrayCoordinateSize - 1){
                     distance = TurfMeasurement.distance(arrayCoordinate[i], arrayCoordinate[i + 1], TurfConstants.UNIT_KILOMETERS)
                     totalDistance += distance
+                    Log.d(MainActivity::class.java.simpleName, "isi array list ${arrayCoordinate[i]}")
                 }
             }
 
-//            if (arrayCoordinateSize >= 2 && distance > 0){
-//                totalDistance += distance
-//            }
-//            for (i in arrayCoordinate){
-//
-//            }
+            historyTotalDistance = BigDecimal(totalDistance).setScale(2, RoundingMode.HALF_EVEN).toDouble()
+
+            Log.d(MainActivity::class.java.simpleName, "is this empty?  ${arrayCoordinate.isEmpty()}")
 
             Toast.makeText(this, "this is totalDistance : $totalDistance", Toast.LENGTH_SHORT).show()
         }
@@ -181,7 +283,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
             }
 
-            initLocationEngine()
+//            initLocationEngine()
 
             locationComponent.addOnCameraTrackingChangedListener(this)
 
@@ -205,15 +307,15 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         isInTrackingMode = false
     }
 
-//    private fun enableLocation(){
-//        if (PermissionsManager.areLocationPermissionsGranted(this)){
-//            //do some stuff
-//        } else {
-//            permissionManager = PermissionsManager(this)
-//            permissionManager.requestLocationPermissions(this)
-//        }
-//    }
-//
+    private fun enableLocation(){
+        if (PermissionsManager.areLocationPermissionsGranted(this)){
+            //do some stuff
+        } else {
+            permissionManager = PermissionsManager(this)
+            permissionManager.requestLocationPermissions(this)
+        }
+    }
+
     private fun initLocationEngine(){
         locationEngine = LocationEngineProvider.getBestLocationEngine(this)
         val request = LocationEngineRequest.Builder(INTERVAL_MILIS)
