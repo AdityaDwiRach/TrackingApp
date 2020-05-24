@@ -13,10 +13,15 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.animation.AnimationUtils
+import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import com.adr.trackingapp.BuildConfig.ACCESS_TOKEN
+import com.adr.trackingapp.database.HistoryEntity
+import com.adr.trackingapp.utils.Converter
 import com.mapbox.android.core.location.*
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
@@ -52,7 +57,10 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
-class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallback, OnCameraTrackingChangedListener {
+class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallback,
+    OnCameraTrackingChangedListener {
+
+    //TODO test the rx/room/mvvm
 
     private lateinit var mapView: MapView
     private lateinit var permissionManager: PermissionsManager
@@ -65,8 +73,10 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     private val callback = MainActivityCallback(this)
     private var historyTotalDistance = 0.0
     private var startTime = 0L
+    private var averageSpeed = 0.0
+    private var mapPreview: ByteArray? = null
     private var stopTime = 0L
-//    private var intervalString = ""
+    private var isFabExpanded = false
 
     var arrayCoordinate: ArrayList<Point> = ArrayList()
     lateinit var map: MapboxMap
@@ -80,6 +90,9 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         super.onCreate(savedInstanceState)
         Mapbox.getInstance(this, ACCESS_TOKEN)
         setContentView(R.layout.activity_main)
+
+        enableLocation()
+
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync(this)
@@ -91,6 +104,8 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
         btn_start_service.setOnClickListener {
             initLocationEngine()
+            mapView.visibility = View.VISIBLE
+            btn_finish.visibility = View.VISIBLE
             startTime = Calendar.getInstance().timeInMillis
             Toast.makeText(this, "current date is ${getCurrentDate()}", Toast.LENGTH_SHORT).show()
         }
@@ -99,14 +114,30 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
             //TODO alert dialog untuk ngasih title running nya
             //TODO store data to room sql
             //TODO data yang ada di dalam sql : KM, description, gambar (possible), current date, average speed
-            
+
             alertDialogSaveData()
-            captureScreenshot(findViewById(R.id.mapView))
+            val capturedBitmap = captureScreenshot(findViewById(R.id.mapView))
             stopTime = Calendar.getInstance().timeInMillis
 
             val time = intervalTime(startTime, stopTime)
-            val averageSpeed = getAverageSpeed(historyTotalDistance / 1000, time)
+            averageSpeed = getAverageSpeed(historyTotalDistance / 1000, time)
+            mapPreview = Converter().bitmaptoByteArray(capturedBitmap)
 //            Toast.makeText(this, "interval time = $interval seconds", Toast.LENGTH_SHORT).show()
+
+            mapView.visibility = View.GONE
+        }
+
+        fab_mainactivity.setOnClickListener {
+            if (isFabExpanded){
+                collapsedFabMenu()
+            } else {
+                expandFabMenu()
+            }
+        }
+
+        fab_main_to_history.setOnClickListener {
+            startActivity(Intent(this, HistoryRunningActivity::class.java))
+            finish()
         }
     }
 
@@ -117,7 +148,8 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId){
+        //TODO add 1 menu
+        when (item.itemId) {
             R.id.history -> {
                 startActivity(Intent(this, HistoryRunningActivity::class.java))
             }
@@ -133,57 +165,65 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
             fab_mainactivity.setOnClickListener {
 //                Toast.makeText(this, "testing click", Toast.LENGTH_SHORT).show()
-                drawLine()
+//                drawLine()
             }
 
-    //            style.addLayer(
-    //                LineLayer("linelayer", "line-source").withProperties(
-    //                    PropertyFactory.lineDasharray(
-    //                        arrayOf(
-    //                            0.01f,
-    //                            2f
-    //                        )
-    //                    ),
-    //                    PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
-    //                    PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
-    //                    PropertyFactory.lineWidth(5f),
-    //                    PropertyFactory.lineColor(
-    //                        Color.parseColor(
-    //                            "#e55e5e"
-    //                        )
-    //                    )
-    //                )
-    //            )
+            //            style.addLayer(
+            //                LineLayer("linelayer", "line-source").withProperties(
+            //                    PropertyFactory.lineDasharray(
+            //                        arrayOf(
+            //                            0.01f,
+            //                            2f
+            //                        )
+            //                    ),
+            //                    PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+            //                    PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+            //                    PropertyFactory.lineWidth(5f),
+            //                    PropertyFactory.lineColor(
+            //                        Color.parseColor(
+            //                            "#e55e5e"
+            //                        )
+            //                    )
+            //                )
+            //            )
         }
 //            Style.Builder().fromUri("mapbox://styles/mapbox/cjerxnqt3cgvp2rmyuxbeqme7"))
 //        { enableLocationComponent(it) }
     }
 
-    private fun alertDialogSaveData(){
+    private fun alertDialogSaveData() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle("SAVE DATA")
         builder.setMessage("Do you want to save running data?")
         builder.setCancelable(true)
 
-        builder.setPositiveButton("YES"){ _, _ -> alertDialogDescription() }
-        builder.setNegativeButton("NO"){ dialog, _ -> dialog.cancel() }
+        builder.setPositiveButton("YES") { _, _ -> alertDialogDescription() }
+        builder.setNegativeButton("NO") { dialog, _ -> dialog.cancel() }
 
         val alertDialog = builder.create()
         alertDialog.show()
     }
 
-    private fun alertDialogDescription(){
+    private fun alertDialogDescription() {
         val builder = AlertDialog.Builder(this)
         val inflater = layoutInflater
         val dialogView = inflater.inflate(R.layout.alert_dialog_description, null)
         builder.setView(dialogView)
         builder.setCancelable(true)
-//
-//        builder.setPositiveButton("SAVE"){ _, _ ->
-//            //TODO save data to room sql
-//            val description = et_alert_dialog_description.text.toString()
-//        }
-//        builder.setNegativeButton("CANCEL"){ dialog, _ -> dialog.cancel() }
+
+        builder.setPositiveButton("SAVE") { _, _ ->
+            val description = et_alert_dialog_description.text.toString()
+            val currentDate = getCurrentDate()
+            val historyData: HistoryEntity
+            if (mapPreview != null) {
+                historyData = HistoryEntity(
+                    currentDate, historyTotalDistance, description,
+                    mapPreview!!, averageSpeed
+                )
+                //TODO insert data to room
+            }
+        }
+        builder.setNegativeButton("CANCEL") { dialog, _ -> dialog.cancel() }
 
         val alertDialog = builder.create()
         alertDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
@@ -195,62 +235,81 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         view.isDrawingCacheEnabled = true
         view.buildDrawingCache(true)
         val bitmapRaw = Bitmap.createBitmap(view.drawingCache)
-        val bitmapCropped = Bitmap.createBitmap(bitmapRaw,0,0,60,40)
+        val bitmapCropped = Bitmap.createBitmap(bitmapRaw, 0, 0, 60, 40)
         view.isDrawingCacheEnabled = false
         return bitmapCropped
         //TODO need test
     }
 
-    private fun intervalTime(startTime: Long, stopTime: Long): Double{
+    private fun intervalTime(startTime: Long, stopTime: Long): Double {
         val intervalMilis = stopTime - startTime
         val seconds = TimeUnit.MILLISECONDS.toSeconds(intervalMilis)
         return seconds.toDouble()
     }
 
-    private fun getAverageSpeed(distanceInMeter: Double, timeInSecond: Double): Double{
+    private fun getAverageSpeed(distanceInMeter: Double, timeInSecond: Double): Double {
         return distanceInMeter / timeInSecond
     }
 
-    private fun getCurrentDate(): String{
+    private fun getCurrentDate(): String {
         val test = Calendar.getInstance().time
         val formatter = SimpleDateFormat.getDateInstance(3)
         return formatter.format(test)
     }
 
-    private fun drawLine(){
-        map.setStyle(Style.MAPBOX_STREETS){
-            it.addSource(GeoJsonSource("line-source", FeatureCollection.fromFeatures(
-                arrayOf(Feature.fromGeometry(LineString.fromLngLats(arrayCoordinate))))))
+    fun drawLine() {
+        map.setStyle(Style.MAPBOX_STREETS) {
+            it.addSource(
+                GeoJsonSource(
+                    "line-source", FeatureCollection.fromFeatures(
+                        arrayOf(Feature.fromGeometry(LineString.fromLngLats(arrayCoordinate)))
+                    )
+                )
+            )
 
-            it.addLayer(LineLayer("linelayer", "line-source").withProperties(
-                PropertyFactory.lineCap(com.mapbox.mapboxsdk.style.layers.Property.LINE_CAP_ROUND),
-                PropertyFactory.lineJoin(com.mapbox.mapboxsdk.style.layers.Property.LINE_JOIN_ROUND),
-                PropertyFactory.lineWidth(5f),
-                PropertyFactory.lineColor(Color.RED)
-            ))
+            it.addLayer(
+                LineLayer("linelayer", "line-source").withProperties(
+                    PropertyFactory.lineCap(com.mapbox.mapboxsdk.style.layers.Property.LINE_CAP_ROUND),
+                    PropertyFactory.lineJoin(com.mapbox.mapboxsdk.style.layers.Property.LINE_JOIN_ROUND),
+                    PropertyFactory.lineWidth(5f),
+                    PropertyFactory.lineColor(Color.RED)
+                )
+            )
 
             val arrayCoordinateSize = arrayCoordinate.size
             var distance = 0.0
             var totalDistance = 0.0
 
-            if (arrayCoordinateSize > 2){
-                for (i in 0 until arrayCoordinateSize - 1){
-                    distance = TurfMeasurement.distance(arrayCoordinate[i], arrayCoordinate[i + 1], TurfConstants.UNIT_KILOMETERS)
+            if (arrayCoordinateSize > 2) {
+                for (i in 0 until arrayCoordinateSize - 1) {
+                    distance = TurfMeasurement.distance(
+                        arrayCoordinate[i],
+                        arrayCoordinate[i + 1],
+                        TurfConstants.UNIT_KILOMETERS
+                    )
                     totalDistance += distance
-                    Log.d(MainActivity::class.java.simpleName, "isi array list ${arrayCoordinate[i]}")
+                    Log.d(
+                        MainActivity::class.java.simpleName,
+                        "isi array list ${arrayCoordinate[i]}"
+                    )
                 }
             }
 
-            historyTotalDistance = BigDecimal(totalDistance).setScale(2, RoundingMode.HALF_EVEN).toDouble()
+            historyTotalDistance =
+                BigDecimal(totalDistance).setScale(2, RoundingMode.HALF_EVEN).toDouble()
 
-            Log.d(MainActivity::class.java.simpleName, "is this empty?  ${arrayCoordinate.isEmpty()}")
+            Log.d(
+                MainActivity::class.java.simpleName,
+                "is this empty?  ${arrayCoordinate.isEmpty()}"
+            )
 
-            Toast.makeText(this, "this is totalDistance : $totalDistance", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "this is totalDistance : $totalDistance", Toast.LENGTH_SHORT)
+                .show()
         }
     }
 
     private fun enableLocationComponent(style: Style) {
-        if (PermissionsManager.areLocationPermissionsGranted(this)){
+        if (PermissionsManager.areLocationPermissionsGranted(this)) {
 
             //create and customize the locationcomponent options
             val customLocationComponentOptions = LocationComponentOptions.builder(this)
@@ -262,9 +321,10 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
             locationComponent = map.locationComponent
 
-            val locationComponentActivationOptions = LocationComponentActivationOptions.builder(this, style)
-                .locationComponentOptions(customLocationComponentOptions)
-                .build()
+            val locationComponentActivationOptions =
+                LocationComponentActivationOptions.builder(this, style)
+                    .locationComponentOptions(customLocationComponentOptions)
+                    .build()
 
             //get instance of the locationcomponent and then adjust its settings
             map.locationComponent.apply {
@@ -307,8 +367,8 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         isInTrackingMode = false
     }
 
-    private fun enableLocation(){
-        if (PermissionsManager.areLocationPermissionsGranted(this)){
+    private fun enableLocation() {
+        if (PermissionsManager.areLocationPermissionsGranted(this)) {
             //do some stuff
         } else {
             permissionManager = PermissionsManager(this)
@@ -316,7 +376,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         }
     }
 
-    private fun initLocationEngine(){
+    private fun initLocationEngine() {
         locationEngine = LocationEngineProvider.getBestLocationEngine(this)
         val request = LocationEngineRequest.Builder(INTERVAL_MILIS)
             .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
@@ -325,13 +385,9 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
         locationEngine?.requestLocationUpdates(request, callback, Looper.getMainLooper())
         locationEngine?.getLastLocation(callback)
-//        val lastLocation = locationEngine?.getLastLocation()
-//        if (lastLocation != null){
-//            originLocation = lastLocation
-//        }
     }
 
-//    private fun initializeLocationLayer(){
+    //    private fun initializeLocationLayer(){
 //
 //    }
 //
@@ -357,7 +413,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
     override fun onDestroy() {
         super.onDestroy()
-        if (locationEngine != null){
+        if (locationEngine != null) {
             locationEngine?.removeLocationUpdates(callback)
         }
         mapView.onDestroy()
@@ -373,9 +429,9 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     }
 
     override fun onPermissionResult(granted: Boolean) {
-//        if (granted){
-//            enableLocation()
-//        }
+        if (granted) {
+            enableLocation()
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -385,28 +441,49 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     ) {
         permissionManager.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
+
+    private fun expandFabMenu() {
+        ViewCompat.animate(fab_mainactivity).rotation(180.0f).withLayer().setDuration(300)
+            .start()
+        val openAnim = AnimationUtils.loadAnimation(this, R.anim.open_fab_anim)
+        ll_history.startAnimation(openAnim)
+        isFabExpanded = true
+    }
+
+    private fun collapsedFabMenu() {
+        ViewCompat.animate(fab_mainactivity).rotation(0.0f).withLayer().setDuration(300)
+            .start()
+        val closeAnim = AnimationUtils.loadAnimation(this, R.anim.close_fab_anim)
+        ll_history.startAnimation(closeAnim)
+        isFabExpanded = false
+    }
 }
 
-private class MainActivityCallback(activity: MainActivity): LocationEngineCallback<LocationEngineResult>{
+private class MainActivityCallback(activity: MainActivity) :
+    LocationEngineCallback<LocationEngineResult> {
     private val activityWeakReference: WeakReference<MainActivity> = WeakReference(activity)
 
     override fun onFailure(exception: Exception) {
         val activity = activityWeakReference.get()
-        if (activity != null){
+        if (activity != null) {
             Toast.makeText(activity, exception.localizedMessage, Toast.LENGTH_SHORT).show()
         }
     }
 
     override fun onSuccess(result: LocationEngineResult?) {
         val activity = activityWeakReference.get()
-        if (activity != null){
+        if (activity != null) {
             val location = result?.lastLocation ?: return
 
-            if (result.lastLocation != null){
+            if (result.lastLocation != null) {
                 val longitude = result.lastLocation?.longitude!!.toDouble()
                 val latitude = result.lastLocation?.latitude!!.toDouble()
-                Log.d(MainActivity::class.java.simpleName, "longitude : $longitude, latitude : $latitude")
+                Log.d(
+                    MainActivity::class.java.simpleName,
+                    "longitude : $longitude, latitude : $latitude"
+                )
                 activity.arrayCoordinate.add(Point.fromLngLat(longitude, latitude))
+                MainActivity().drawLine()
             }
         }
     }

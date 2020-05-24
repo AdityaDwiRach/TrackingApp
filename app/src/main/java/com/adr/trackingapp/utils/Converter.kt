@@ -2,7 +2,6 @@ package com.adr.trackingapp.utils
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 class Converter {
