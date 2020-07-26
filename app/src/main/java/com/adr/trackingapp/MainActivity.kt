@@ -23,6 +23,7 @@ import androidx.core.view.ViewCompat
 import com.adr.trackingapp.BuildConfig.ACCESS_TOKEN
 import com.adr.trackingapp.database.HistoryEntity
 import com.adr.trackingapp.utils.Converter
+import com.adr.trackingapp.viewmodel.HistoryViewModel
 import com.mapbox.android.core.location.*
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
@@ -56,9 +57,10 @@ import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
 class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallback,
-    OnCameraTrackingChangedListener {
+    OnCameraTrackingChangedListener, LocationEngineCallback<LocationEngineResult> {
 
     //TODO test the rx/room/mvvm
+    //TODO test the auto route, because there is slight change
 
     private lateinit var mapView: MapView
     private lateinit var permissionManager: PermissionsManager
@@ -68,7 +70,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     private var isInTrackingMode = false
     private var locationEngine: LocationEngine? = null
     private var locationLayerPlugin: LocationLayerPlugin? = null
-    private val callback = MainActivityCallback(this)
+//    private val callback = MainActivityCallback(this)
     private var historyTotalDistance = 0.0
     private var startTime = 0L
     private var averageSpeed = 0.0
@@ -93,12 +95,6 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
-//        mapView.getMapAsync(this)
-//        { mapboxMap ->
-//            mapboxMap.setStyle(Style.MAPBOX_STREETS) {
-//                //map is setup, and the style has loaded. now you can add data or make other map adjustment
-//            }
-//        }
 
         btn_start_service.setOnClickListener {
             mapView.getMapAsync(this)
@@ -115,13 +111,14 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
             //TODO store data to room sql
             //TODO data yang ada di dalam sql : KM, description, gambar (possible), current date, average speed
 
-            alertDialogSaveData()
             val capturedBitmap = captureScreenshot(findViewById(R.id.mapView))
             stopTime = Calendar.getInstance().timeInMillis
 
             val time = intervalTime(startTime, stopTime)
             averageSpeed = getAverageSpeed(historyTotalDistance / 1000, time)
             mapPreview = Converter().bitmaptoByteArray(capturedBitmap)
+
+            alertDialogSaveData()
 
             mapView.visibility = View.GONE
             mapView.invalidate()
@@ -201,6 +198,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
                     mapPreview!!, averageSpeed
                 )
                 //TODO insert data to room
+                HistoryViewModel().insert(historyData)
             }
         }
         builder.setNegativeButton("CANCEL") { dialog, _ -> dialog.cancel() }
@@ -237,7 +235,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         return formatter.format(test)
     }
 
-    fun drawLine() {
+    private fun drawLine() {
         if (map != null) {
             map!!.setStyle(Style.MAPBOX_STREETS) {
                 it.addSource(
@@ -274,9 +272,6 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
                 historyTotalDistance =
                     BigDecimal(totalDistance).setScale(2, RoundingMode.HALF_EVEN).toDouble()
-
-//                Toast.makeText(this, "this is totalDistance : $totalDistance", Toast.LENGTH_SHORT)
-//                    .show()
             }
         }
     }
@@ -354,34 +349,30 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
             .setMaxWaitTime(MAX_WAIT_TIME)
             .build()
 
-        locationEngine?.requestLocationUpdates(request, object : LocationEngineCallback<LocationEngineResult>{
-            override fun onSuccess(result: LocationEngineResult?) {
-                if (result != null) {
-                    if (result.lastLocation != null) {
-                        val longitude = result.lastLocation?.longitude!!.toDouble()
-                        val latitude = result.lastLocation?.latitude!!.toDouble()
-                        Log.d(
-                            MainActivity::class.java.simpleName,
-                            "longitude : $longitude, latitude : $latitude"
-                        )
-                        this@MainActivity.arrayCoordinate.add(Point.fromLngLat(longitude, latitude))
-
-                        drawLine()
-//                val status = activity.isMapReady
-//                if (status) {
-//                    Log.d("testing", "masuk siniiiii $status")
-//                    MainActivity().drawLine()
+        locationEngine?.requestLocationUpdates(request, this, Looper.getMainLooper())
+//            object : LocationEngineCallback<LocationEngineResult>{
+//            override fun onSuccess(result: LocationEngineResult?) {
+//                if (result != null) {
+//                    if (result.lastLocation != null) {
+//                        val longitude = result.lastLocation?.longitude!!.toDouble()
+//                        val latitude = result.lastLocation?.latitude!!.toDouble()
+//                        Log.d(
+//                            MainActivity::class.java.simpleName,
+//                            "longitude : $longitude, latitude : $latitude"
+//                        )
+//                        this@MainActivity.arrayCoordinate.add(Point.fromLngLat(longitude, latitude))
+//
+//                        drawLine()
+//                    }
 //                }
-                    }
-                }
-            }
+//            }
+//
+//            override fun onFailure(exception: java.lang.Exception) {
+//                Toast.makeText(this@MainActivity, exception.localizedMessage, Toast.LENGTH_SHORT).show()
+//            }
 
-            override fun onFailure(exception: java.lang.Exception) {
-                Toast.makeText(this@MainActivity, exception.localizedMessage, Toast.LENGTH_SHORT).show()
-            }
-
-        }, Looper.getMainLooper())
-        locationEngine?.getLastLocation(callback)
+//        }, Looper.getMainLooper())
+        locationEngine?.getLastLocation(this)
     }
 
     override fun onStart() {
@@ -407,7 +398,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     override fun onDestroy() {
         super.onDestroy()
         if (locationEngine != null) {
-            locationEngine?.removeLocationUpdates(callback)
+            locationEngine?.removeLocationUpdates(this)
         }
         mapView.onDestroy()
     }
@@ -450,24 +441,9 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         ll_history.startAnimation(closeAnim)
         isFabExpanded = false
     }
-}
-
-private class MainActivityCallback(activity: MainActivity) :
-    LocationEngineCallback<LocationEngineResult> {
-    private val activityWeakReference: WeakReference<MainActivity> = WeakReference(activity)
-
-    override fun onFailure(exception: Exception) {
-        val activity = activityWeakReference.get()
-        if (activity != null) {
-            Toast.makeText(activity, exception.localizedMessage, Toast.LENGTH_SHORT).show()
-        }
-    }
 
     override fun onSuccess(result: LocationEngineResult?) {
-        val activity = activityWeakReference.get()
-        if (activity != null) {
-            val location = result?.lastLocation ?: return
-
+        if (result != null) {
             if (result.lastLocation != null) {
                 val longitude = result.lastLocation?.longitude!!.toDouble()
                 val latitude = result.lastLocation?.latitude!!.toDouble()
@@ -475,15 +451,45 @@ private class MainActivityCallback(activity: MainActivity) :
                     MainActivity::class.java.simpleName,
                     "longitude : $longitude, latitude : $latitude"
                 )
-                activity.arrayCoordinate.add(Point.fromLngLat(longitude, latitude))
+                this@MainActivity.arrayCoordinate.add(Point.fromLngLat(longitude, latitude))
 
-//                val status = activity.isMapReady
-//                if (status) {
-//                    Log.d("testing", "masuk siniiiii $status")
-//                    MainActivity().drawLine()
-//                }
+                drawLine()
             }
         }
     }
 
+    override fun onFailure(exception: java.lang.Exception) {
+        Toast.makeText(this@MainActivity, exception.localizedMessage, Toast.LENGTH_SHORT).show()
+    }
+
 }
+
+//private class MainActivityCallback(activity: MainActivity) :
+//    LocationEngineCallback<LocationEngineResult> {
+//    private val activityWeakReference: WeakReference<MainActivity> = WeakReference(activity)
+//
+//    override fun onFailure(exception: Exception) {
+//        val activity = activityWeakReference.get()
+//        if (activity != null) {
+//            Toast.makeText(activity, exception.localizedMessage, Toast.LENGTH_SHORT).show()
+//        }
+//    }
+//
+//    override fun onSuccess(result: LocationEngineResult?) {
+//        val activity = activityWeakReference.get()
+//        if (activity != null) {
+//            val location = result?.lastLocation ?: return
+//
+//            if (result.lastLocation != null) {
+//                val longitude = result.lastLocation?.longitude!!.toDouble()
+//                val latitude = result.lastLocation?.latitude!!.toDouble()
+//                Log.d(
+//                    MainActivity::class.java.simpleName,
+//                    "longitude : $longitude, latitude : $latitude"
+//                )
+//                activity.arrayCoordinate.add(Point.fromLngLat(longitude, latitude))
+//            }
+//        }
+//    }
+//
+//}
