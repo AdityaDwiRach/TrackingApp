@@ -1,5 +1,6 @@
 package com.adr.trackingapp
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -30,10 +31,7 @@ import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.LineString
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
-import com.mapbox.mapboxsdk.location.LocationComponent
-import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions
-import com.mapbox.mapboxsdk.location.LocationComponentOptions
-import com.mapbox.mapboxsdk.location.OnCameraTrackingChangedListener
+import com.mapbox.mapboxsdk.location.*
 import com.mapbox.mapboxsdk.location.modes.CameraMode
 import com.mapbox.mapboxsdk.location.modes.RenderMode
 import com.mapbox.mapboxsdk.maps.MapView
@@ -79,7 +77,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     private var isFabExpanded = false
 
     var arrayCoordinate: ArrayList<Point> = ArrayList()
-    lateinit var map: MapboxMap
+    var map: MapboxMap? = null
 
     companion object {
         private const val INTERVAL_MILIS = 5000L
@@ -95,7 +93,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
-        mapView.getMapAsync(this)
+//        mapView.getMapAsync(this)
 //        { mapboxMap ->
 //            mapboxMap.setStyle(Style.MAPBOX_STREETS) {
 //                //map is setup, and the style has loaded. now you can add data or make other map adjustment
@@ -103,9 +101,11 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 //        }
 
         btn_start_service.setOnClickListener {
+            mapView.getMapAsync(this)
             initLocationEngine()
             mapView.visibility = View.VISIBLE
             btn_finish.visibility = View.VISIBLE
+            btn_start_service.visibility = View.GONE
             startTime = Calendar.getInstance().timeInMillis
             Toast.makeText(this, "current date is ${getCurrentDate()}", Toast.LENGTH_SHORT).show()
         }
@@ -122,13 +122,16 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
             val time = intervalTime(startTime, stopTime)
             averageSpeed = getAverageSpeed(historyTotalDistance / 1000, time)
             mapPreview = Converter().bitmaptoByteArray(capturedBitmap)
-//            Toast.makeText(this, "interval time = $interval seconds", Toast.LENGTH_SHORT).show()
 
             mapView.visibility = View.GONE
+            mapView.invalidate()
+            arrayCoordinate = ArrayList()
+            btn_finish.visibility = View.GONE
+            btn_start_service.visibility = View.VISIBLE
         }
 
         fab_mainactivity.setOnClickListener {
-            if (isFabExpanded){
+            if (isFabExpanded) {
                 collapsedFabMenu()
             } else {
                 expandFabMenu()
@@ -159,36 +162,13 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.map = mapboxMap
+        mapView.onStart()
 
-        map.setStyle(Style.MAPBOX_STREETS) {
-            enableLocationComponent(it)
-
-            fab_mainactivity.setOnClickListener {
-//                Toast.makeText(this, "testing click", Toast.LENGTH_SHORT).show()
-//                drawLine()
+        if (map != null) {
+            map!!.setStyle(Style.MAPBOX_STREETS) {
+                enableLocationComponent(it)
             }
-
-            //            style.addLayer(
-            //                LineLayer("linelayer", "line-source").withProperties(
-            //                    PropertyFactory.lineDasharray(
-            //                        arrayOf(
-            //                            0.01f,
-            //                            2f
-            //                        )
-            //                    ),
-            //                    PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
-            //                    PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
-            //                    PropertyFactory.lineWidth(5f),
-            //                    PropertyFactory.lineColor(
-            //                        Color.parseColor(
-            //                            "#e55e5e"
-            //                        )
-            //                    )
-            //                )
-            //            )
         }
-//            Style.Builder().fromUri("mapbox://styles/mapbox/cjerxnqt3cgvp2rmyuxbeqme7"))
-//        { enableLocationComponent(it) }
     }
 
     private fun alertDialogSaveData() {
@@ -258,56 +238,50 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     }
 
     fun drawLine() {
-        map.setStyle(Style.MAPBOX_STREETS) {
-            it.addSource(
-                GeoJsonSource(
-                    "line-source", FeatureCollection.fromFeatures(
-                        arrayOf(Feature.fromGeometry(LineString.fromLngLats(arrayCoordinate)))
+        if (map != null) {
+            map!!.setStyle(Style.MAPBOX_STREETS) {
+                it.addSource(
+                    GeoJsonSource(
+                        "line-source", FeatureCollection.fromFeatures(
+                            arrayOf(Feature.fromGeometry(LineString.fromLngLats(arrayCoordinate)))
+                        )
                     )
                 )
-            )
 
-            it.addLayer(
-                LineLayer("linelayer", "line-source").withProperties(
-                    PropertyFactory.lineCap(com.mapbox.mapboxsdk.style.layers.Property.LINE_CAP_ROUND),
-                    PropertyFactory.lineJoin(com.mapbox.mapboxsdk.style.layers.Property.LINE_JOIN_ROUND),
-                    PropertyFactory.lineWidth(5f),
-                    PropertyFactory.lineColor(Color.RED)
+                it.addLayer(
+                    LineLayer("linelayer", "line-source").withProperties(
+                        PropertyFactory.lineCap(com.mapbox.mapboxsdk.style.layers.Property.LINE_CAP_ROUND),
+                        PropertyFactory.lineJoin(com.mapbox.mapboxsdk.style.layers.Property.LINE_JOIN_ROUND),
+                        PropertyFactory.lineWidth(5f),
+                        PropertyFactory.lineColor(Color.RED)
+                    )
                 )
-            )
 
-            val arrayCoordinateSize = arrayCoordinate.size
-            var distance = 0.0
-            var totalDistance = 0.0
+                val arrayCoordinateSize = arrayCoordinate.size
+                var distance = 0.0
+                var totalDistance = 0.0
 
-            if (arrayCoordinateSize > 2) {
-                for (i in 0 until arrayCoordinateSize - 1) {
-                    distance = TurfMeasurement.distance(
-                        arrayCoordinate[i],
-                        arrayCoordinate[i + 1],
-                        TurfConstants.UNIT_KILOMETERS
-                    )
-                    totalDistance += distance
-                    Log.d(
-                        MainActivity::class.java.simpleName,
-                        "isi array list ${arrayCoordinate[i]}"
-                    )
+                if (arrayCoordinateSize > 2) {
+                    for (i in 0 until arrayCoordinateSize - 1) {
+                        distance = TurfMeasurement.distance(
+                            arrayCoordinate[i],
+                            arrayCoordinate[i + 1],
+                            TurfConstants.UNIT_KILOMETERS
+                        )
+                        totalDistance += distance
+                    }
                 }
+
+                historyTotalDistance =
+                    BigDecimal(totalDistance).setScale(2, RoundingMode.HALF_EVEN).toDouble()
+
+//                Toast.makeText(this, "this is totalDistance : $totalDistance", Toast.LENGTH_SHORT)
+//                    .show()
             }
-
-            historyTotalDistance =
-                BigDecimal(totalDistance).setScale(2, RoundingMode.HALF_EVEN).toDouble()
-
-            Log.d(
-                MainActivity::class.java.simpleName,
-                "is this empty?  ${arrayCoordinate.isEmpty()}"
-            )
-
-            Toast.makeText(this, "this is totalDistance : $totalDistance", Toast.LENGTH_SHORT)
-                .show()
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun enableLocationComponent(style: Style) {
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
 
@@ -319,7 +293,9 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
                 .accuracyColor(Color.RED)
                 .build()
 
-            locationComponent = map.locationComponent
+            if (map != null) {
+                locationComponent = map!!.locationComponent
+            }
 
             val locationComponentActivationOptions =
                 LocationComponentActivationOptions.builder(this, style)
@@ -327,33 +303,26 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
                     .build()
 
             //get instance of the locationcomponent and then adjust its settings
-            map.locationComponent.apply {
+            if (map != null) {
+                map!!.locationComponent.apply {
 
-                //activate thte locationcomponent with options
-                activateLocationComponent(locationComponentActivationOptions)
+                    //activate thte locationcomponent with options
+                    activateLocationComponent(locationComponentActivationOptions)
 
-                //enable to make the locationcomponent visible
-                isLocationComponentEnabled = true
+                    //enable to make the locationcomponent visible
+                    isLocationComponentEnabled = true
 
-                //set the locationcomponent camera mode
-                cameraMode = CameraMode.TRACKING
+                    //set the locationcomponent camera mode
+                    cameraMode = CameraMode.TRACKING
 
-                //set the locationcomponent render mode
-                renderMode = RenderMode.COMPASS
+                    //set the locationcomponent render mode
+                    renderMode = RenderMode.COMPASS
 
+                }
             }
-
-//            initLocationEngine()
 
             locationComponent.addOnCameraTrackingChangedListener(this)
 
-//            fab_mainactivity.setOnClickListener {
-//                if (!isInTrackingMode) {
-//                    isInTrackingMode = true
-//                    locationComponent.cameraMode = CameraMode.TRACKING
-//                    locationComponent.zoomWhileTracking(16.0)
-//                }
-//            }
         } else {
             permissionManager = PermissionsManager(this)
             permissionManager.requestLocationPermissions(this)
@@ -361,6 +330,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     }
 
     override fun onCameraTrackingChanged(currentMode: Int) {
+        Toast.makeText(this, "testing camera change", Toast.LENGTH_SHORT).show()
     }
 
     override fun onCameraTrackingDismissed() {
@@ -376,6 +346,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun initLocationEngine() {
         locationEngine = LocationEngineProvider.getBestLocationEngine(this)
         val request = LocationEngineRequest.Builder(INTERVAL_MILIS)
@@ -383,14 +354,36 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
             .setMaxWaitTime(MAX_WAIT_TIME)
             .build()
 
-        locationEngine?.requestLocationUpdates(request, callback, Looper.getMainLooper())
+        locationEngine?.requestLocationUpdates(request, object : LocationEngineCallback<LocationEngineResult>{
+            override fun onSuccess(result: LocationEngineResult?) {
+                if (result != null) {
+                    if (result.lastLocation != null) {
+                        val longitude = result.lastLocation?.longitude!!.toDouble()
+                        val latitude = result.lastLocation?.latitude!!.toDouble()
+                        Log.d(
+                            MainActivity::class.java.simpleName,
+                            "longitude : $longitude, latitude : $latitude"
+                        )
+                        this@MainActivity.arrayCoordinate.add(Point.fromLngLat(longitude, latitude))
+
+                        drawLine()
+//                val status = activity.isMapReady
+//                if (status) {
+//                    Log.d("testing", "masuk siniiiii $status")
+//                    MainActivity().drawLine()
+//                }
+                    }
+                }
+            }
+
+            override fun onFailure(exception: java.lang.Exception) {
+                Toast.makeText(this@MainActivity, exception.localizedMessage, Toast.LENGTH_SHORT).show()
+            }
+
+        }, Looper.getMainLooper())
         locationEngine?.getLastLocation(callback)
     }
 
-    //    private fun initializeLocationLayer(){
-//
-//    }
-//
     override fun onStart() {
         super.onStart()
         mapView.onStart()
@@ -483,7 +476,12 @@ private class MainActivityCallback(activity: MainActivity) :
                     "longitude : $longitude, latitude : $latitude"
                 )
                 activity.arrayCoordinate.add(Point.fromLngLat(longitude, latitude))
-                MainActivity().drawLine()
+
+//                val status = activity.isMapReady
+//                if (status) {
+//                    Log.d("testing", "masuk siniiiii $status")
+//                    MainActivity().drawLine()
+//                }
             }
         }
     }
