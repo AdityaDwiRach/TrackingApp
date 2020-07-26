@@ -1,4 +1,4 @@
-package com.adr.trackingapp.viewmodel
+package com.adr.trackingapp.database
 
 import android.content.Context
 import android.util.Log
@@ -13,7 +13,7 @@ import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 
-class DatabaseViewModel : ViewModel() {
+class HistoryRepository {
 
     private val compositeDisposable = CompositeDisposable()
     private var databaseInstance: HistoryDatabase? = null
@@ -89,12 +89,4 @@ class DatabaseViewModel : ViewModel() {
             })
         return dataList
     }
-
-    override fun onCleared() {
-        compositeDisposable.dispose()
-        compositeDisposable.clear()
-        super.onCleared()
-    }
-
-
 }

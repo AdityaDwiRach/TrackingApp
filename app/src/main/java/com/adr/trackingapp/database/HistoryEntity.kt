@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 import java.io.Serializable
 
 
-@Entity(tableName = "historyentity")
+@Entity(tableName = "history_table")
 data class HistoryEntity (
     //TODO tentuin fix isi tabel sebelum jalanin tes
     val date: String,

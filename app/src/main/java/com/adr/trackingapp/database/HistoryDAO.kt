@@ -14,7 +14,7 @@ interface HistoryDAO {
     @Insert
     fun insert(historyEntity: HistoryEntity): Completable
 
-    @Query("SELECT * FROM historyentity")
+    @Query("SELECT * FROM history_table")
     fun getAllData(): Observable<List<HistoryEntity>>
 
     @Delete
