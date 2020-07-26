@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.view.animation.AnimationUtils
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.adr.trackingapp.adapter.HistoryRunningAdapter
 import kotlinx.android.synthetic.main.activity_history_running.*
 
 class HistoryRunningActivity : AppCompatActivity() {
@@ -14,6 +16,11 @@ class HistoryRunningActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_history_running)
+
+        val adapter = HistoryRunningAdapter()
+        rv_history_running.setHasFixedSize(true)
+        rv_history_running.layoutManager = LinearLayoutManager(this)
+        rv_history_running.adapter = adapter
 
         fab_historyactivity.setOnClickListener {
             if (isFabExpanded){
