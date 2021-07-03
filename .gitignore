@@ -14,3 +14,5 @@
 .externalNativeBuild
 .cxx
 .idea/jarRepositories.xml
+.idea/runConfigurations.xml
+.idea/misc.xml
