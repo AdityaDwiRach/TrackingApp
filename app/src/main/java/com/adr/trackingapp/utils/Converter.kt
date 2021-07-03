@@ -10,12 +10,10 @@ class Converter {
         val stream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 90, stream)
         return stream.toByteArray()
-        //TODO need test
     }
 
     fun byteArraytoBitmap(byteArray: ByteArray): Bitmap {
         return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
-        //TODO need test
     }
 
 }

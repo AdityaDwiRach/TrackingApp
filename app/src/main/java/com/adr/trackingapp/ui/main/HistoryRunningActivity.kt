@@ -1,4 +1,4 @@
-package com.adr.trackingapp
+package com.adr.trackingapp.ui.main
 
 import android.content.Intent
 import android.os.Bundle
@@ -6,7 +6,8 @@ import android.view.animation.AnimationUtils
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.adr.trackingapp.adapter.HistoryRunningAdapter
+import com.adr.trackingapp.R
+import com.adr.trackingapp.ui.adapter.HistoryRunningAdapter
 import kotlinx.android.synthetic.main.activity_history_running.*
 
 class HistoryRunningActivity : AppCompatActivity() {

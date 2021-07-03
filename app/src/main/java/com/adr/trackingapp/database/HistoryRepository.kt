@@ -3,9 +3,7 @@ package com.adr.trackingapp.database
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
-import androidx.lifecycle.ViewModel
-import com.adr.trackingapp.database.HistoryDatabase
-import com.adr.trackingapp.database.HistoryEntity
+import com.adr.trackingapp.data.model.HistoryEntity
 import io.reactivex.CompletableObserver
 import io.reactivex.Observer
 import io.reactivex.android.schedulers.AndroidSchedulers

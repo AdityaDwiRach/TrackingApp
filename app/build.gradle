@@ -2,16 +2,17 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
+apply plugin: 'com.google.gms.google-services'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 30
     buildToolsVersion "29.0.3"
     defaultConfig {
         applicationId "com.adr.trackingapp"
-        minSdkVersion 21
-        targetSdkVersion 29
+        minSdkVersion 23
+        targetSdkVersion 30
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "ACCESS_TOKEN", '"pk.eyJ1IjoiYWRpdHlhZHIiLCJhIjoiY2s3dHd4ZTJuMTQ5YTNtcjJ5cnZ2anB4YyJ9.j2rKwfs-x2Qe7j3UYqX8HA"')
     }
@@ -25,14 +26,18 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    buildFeatures {
+        viewBinding true
+    }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.core:core-ktx:1.3.1'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    implementation 'androidx.appcompat:appcompat:1.3.0'
+    implementation 'androidx.core:core-ktx:1.5.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     testImplementation 'junit:junit:4.13'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
@@ -41,7 +46,7 @@ dependencies {
     implementation 'com.mapbox.mapboxsdk:mapbox-android-core:1.4.1'
     implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:9.0.0'
     implementation 'com.mapbox.mapboxsdk:mapbox-android-plugin-locationlayer:0.5.0'
-    implementation 'com.google.android.material:material:1.1.0'
+    implementation 'com.google.android.material:material:1.3.0'
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-turf:5.0.0'
 
     //Room
@@ -54,10 +59,25 @@ dependencies {
 
     //Lifecycle
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
-    annotationProcessor 'androidx.lifecycle:lifecycle-compiler:2.2.0'
-    kapt 'androidx.lifecycle:lifecycle-compiler:2.2.0'
+    annotationProcessor 'androidx.lifecycle:lifecycle-compiler:2.3.1'
+    kapt 'androidx.lifecycle:lifecycle-compiler:2.3.1'
 
     // Glide
-    implementation 'com.github.bumptech.glide:glide:4.11.0'
-    annotationProcessor 'com.github.bumptech.glide:compiler:4.11.0'
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
+
+    // Firebase
+    implementation platform('com.google.firebase:firebase-bom:28.1.0')
+
+    // Firebase Auth
+    implementation 'com.google.firebase:firebase-auth-ktx'
+
+    // Firebase Cloud Firestore
+    implementation 'com.google.firebase:firebase-firestore-ktx'
+
+    // Firebase Analytics
+    implementation 'com.google.firebase:firebase-analytics-ktx'
+
+    // Encrypted Preference
+    implementation 'androidx.security:security-crypto:1.1.0-alpha03'
 }

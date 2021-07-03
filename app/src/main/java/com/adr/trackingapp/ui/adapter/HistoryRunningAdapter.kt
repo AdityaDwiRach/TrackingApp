@@ -1,4 +1,4 @@
-package com.adr.trackingapp.adapter
+package com.adr.trackingapp.ui.adapter
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -8,7 +8,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.adr.trackingapp.R
-import com.adr.trackingapp.database.HistoryEntity
+import com.adr.trackingapp.data.model.HistoryEntity
 import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.item_history_running.view.*
 

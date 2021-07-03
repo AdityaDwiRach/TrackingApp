@@ -1,7 +1,7 @@
-package com.adr.trackingapp.viewmodel
+package com.adr.trackingapp.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.adr.trackingapp.database.HistoryEntity
+import com.adr.trackingapp.data.model.HistoryEntity
 import com.adr.trackingapp.database.HistoryRepository
 
 class HistoryViewModel : ViewModel() {

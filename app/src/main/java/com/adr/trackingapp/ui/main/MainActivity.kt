@@ -1,13 +1,11 @@
-package com.adr.trackingapp
+package com.adr.trackingapp.ui.main
 
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.location.Location
-import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
@@ -15,15 +13,15 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.animation.AnimationUtils
-import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import com.adr.trackingapp.BuildConfig.ACCESS_TOKEN
-import com.adr.trackingapp.database.HistoryEntity
+import com.adr.trackingapp.R
+import com.adr.trackingapp.data.model.HistoryEntity
 import com.adr.trackingapp.utils.Converter
-import com.adr.trackingapp.viewmodel.HistoryViewModel
+import com.adr.trackingapp.ui.viewmodel.HistoryViewModel
 import com.mapbox.android.core.location.*
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
@@ -47,10 +45,8 @@ import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfMeasurement
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.alert_dialog_description.*
-import java.lang.ref.WeakReference
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.sql.Time
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit

@@ -1,3 +1,27 @@
 <resources>
     <string name="app_name">TrackingApp</string>
+
+    <string name="sign_up_error">Sign up failed. Please check your connection.</string>
+    <string name="sign_in_email_pass_error">Sign in failed. Please check your e-mail and password combination.</string>
+    <string name="login_account">Login Account</string>
+    <string name="e_mail">E-mail</string>
+    <string name="password">Password</string>
+    <string name="login">Login</string>
+    <string name="sign_in_with_google">or Sign In with Google</string>
+    <string name="login_with_google">Login with Google</string>
+    <string name="not_registered_yet">Not registered yet?</string>
+    <string name="create_an_account">Create An Account</string>
+    <string name="register_account">Register Account</string>
+    <string name="first_name">First Name</string>
+    <string name="last_name">Last Name</string>
+    <string name="re_enter_password">Re-enter Password</string>
+    <string name="register">Register</string>
+    <string name="e_mail_regis_error">E-mail not found</string>
+    <string name="password_regis_error">Password not strong enough</string>
+    <string name="password_regis_not_same">Your password did not equal. Please check your password again.</string>
+    <string name="first_name_regis_empty_error">First Name could not be empty</string>
+    <string name="last_name_regis_empty_error">Lase Name could not be empty</string>
+    <string name="username_regis_empty_error">Username could not be empty</string>
+    <string name="e_mail_regis_empty_error">E-mail could not be empty</string>
+    <string name="password_regis_empty_error">Password could not be empty</string>
 </resources>
