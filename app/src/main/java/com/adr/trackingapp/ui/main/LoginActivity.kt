@@ -22,13 +22,22 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
 
-        viewModel.initializeViewModel()
+        viewModel.initializeViewModel(this)
         if (viewModel.isLoggedIn()){
             startActivity(Intent(this, SplashWelcomeActivity::class.java))
             finish()
         }
 
         setContentView(binding?.root)
+
+        val rememberedEmail = viewModel.getRememberedEmail()
+        val rememberedPassword = viewModel.getRememberedPassword()
+        if (rememberedEmail != "" && rememberedPassword != ""){
+            binding?.etEmailLogin?.setText(rememberedEmail)
+            binding?.etPasswordLogin?.setText(rememberedPassword)
+        }
+
+        binding?.cbRememberMe?.isChecked = viewModel.getRememberMeStatus()
 
         binding?.etEmailLogin?.addTextChangedListener(object : TextWatcher{
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
@@ -51,6 +60,15 @@ class LoginActivity : AppCompatActivity() {
         })
 
         binding?.btnLoginLogin?.setOnClickListener {
+            val rememberMeStatus = binding?.cbRememberMe!!.isChecked
+            if (rememberMeStatus){
+                viewModel.onRememberMeChecked(binding?.etEmailLogin?.text.toString(),
+                    binding?.etPasswordLogin?.text.toString())
+            } else {
+                viewModel.onRememberMeNotChecked()
+            }
+
+            viewModel.onRememberMeStatus(rememberMeStatus)
             signInExistingUser(binding?.etEmailLogin?.text.toString(), binding?.etPasswordLogin?.text.toString())
         }
 

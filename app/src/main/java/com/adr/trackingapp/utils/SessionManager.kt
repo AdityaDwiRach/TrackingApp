@@ -16,6 +16,9 @@ class SessionManager() {
 
     companion object {
         const val USERNAME = "username"
+        const val E_MAIL = "e_mail"
+        const val PASSWORD = "password"
+        const val REMEMBER_ME = "remember_me"
     }
 
     fun initializeSessionManager(context: Context){
