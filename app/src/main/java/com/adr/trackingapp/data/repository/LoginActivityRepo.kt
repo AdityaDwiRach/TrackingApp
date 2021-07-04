@@ -17,17 +17,17 @@ class LoginActivityRepo: ILoginActivityRepo {
         this.activity = activity
     }
 
-    override fun signInExistingUser(email: String, password: String, auth: FirebaseAuth,
-                                    observer: Observer<Boolean>) {
-        auth.signInWithEmailAndPassword(email, password).addOnCompleteListener(activity) {
-            if (it.isSuccessful){
-                observer.onNext(true)
-            } else {
-                observer.onNext(false)
-            }
+    override fun signInExistingUser(email: String, password: String, auth: FirebaseAuth): Observable<Boolean> {
 
-            if (it.isComplete){
-                observer.onComplete()
+        return Observable.create { emitter ->
+            auth.signInWithEmailAndPassword(email, password).addOnCompleteListener {
+                if (it.isSuccessful){
+                    emitter.onNext(true)
+                } else {
+                    emitter.onNext(false)
+                }
+
+                emitter.onComplete()
             }
         }
     }

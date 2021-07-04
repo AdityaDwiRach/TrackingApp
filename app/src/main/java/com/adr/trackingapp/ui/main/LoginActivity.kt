@@ -67,7 +67,6 @@ class LoginActivity : AppCompatActivity() {
         val observer = Observer<Boolean> {
             if (it){
                 startActivity(Intent(this, SplashWelcomeActivity::class.java))
-                viewModel.getCurrentUser()
             } else {
                 Toast.makeText(this, resources.getString(R.string.sign_in_email_pass_error), Toast.LENGTH_SHORT).show()
             }

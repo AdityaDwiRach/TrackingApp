@@ -1,5 +1,6 @@
 package com.adr.trackingapp.ui.viewmodel
 
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.adr.trackingapp.data.repository.LoginActivityRepo
@@ -36,28 +37,28 @@ class LoginActivityViewModel: ViewModel() {
         return false
     }
 
-    fun signInExistingUser(email: String, password: String, observer: androidx.lifecycle.Observer<Boolean>){
+    fun signInExistingUser(email: String, password: String,
+                           observer: androidx.lifecycle.Observer<Boolean>){
 
-        val signInObserver = object : Observer<Boolean>{
-            override fun onSubscribe(d: Disposable) {
-                compositeDisposable.add(d)
-            }
+        repo.signInExistingUser(email, password, auth).subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread()).subscribe(object : Observer<Boolean>{
+                override fun onSubscribe(d: Disposable) {
+                    compositeDisposable.add(d)
+                }
 
-            override fun onNext(t: Boolean) {
-                observer.onChanged(t)
-            }
+                override fun onNext(t: Boolean) {
+                    observer.onChanged(t)
+                }
 
-            override fun onError(e: Throwable) {
+                override fun onError(e: Throwable) {
 
-            }
+                }
 
-            override fun onComplete() {
+                override fun onComplete() {
 
-            }
+                }
 
-        }
-
-        repo.signInExistingUser(email, password, auth, signInObserver)
+            })
     }
 
     fun getCurrentUser(): FirebaseUser{
