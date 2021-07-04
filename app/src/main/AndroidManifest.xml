@@ -13,7 +13,7 @@
         android:roundIcon="@mipmap/ic_launcher_tracking_icon_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".ui.main.SplashWelcomeActivity"></activity>
+        <activity android:name=".ui.main.SplashWelcomeActivity" />
         <activity android:name=".ui.main.RegistrationActivity" />
         <activity android:name=".ui.main.LoginActivity">
             <intent-filter>

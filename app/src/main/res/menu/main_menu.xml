@@ -6,4 +6,9 @@
         android:icon="@drawable/ic_history_black"
         android:title="Running History"
         app:showAsAction="never"/>
+
+    <item android:id="@+id/logout"
+        android:icon="@drawable/ic_logout"
+        android:title="Logout"
+        app:showAsAction="never"/>
 </menu>

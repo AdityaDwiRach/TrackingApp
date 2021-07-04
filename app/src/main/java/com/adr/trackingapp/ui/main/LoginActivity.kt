@@ -22,8 +22,13 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
 
-        setContentView(binding?.root)
         viewModel.initializeViewModel()
+        if (viewModel.isLoggedIn()){
+            startActivity(Intent(this, SplashWelcomeActivity::class.java))
+            finish()
+        }
+
+        setContentView(binding?.root)
 
         binding?.etEmailLogin?.addTextChangedListener(object : TextWatcher{
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
@@ -46,7 +51,7 @@ class LoginActivity : AppCompatActivity() {
         })
 
         binding?.btnLoginLogin?.setOnClickListener {
-
+            signInExistingUser(binding?.etEmailLogin?.text.toString(), binding?.etPasswordLogin?.text.toString())
         }
 
         binding?.btnGoogleLoginLogin?.setOnClickListener {
@@ -59,14 +64,15 @@ class LoginActivity : AppCompatActivity() {
     }
 
     fun signInExistingUser(email: String, password: String){
-        viewModel.signInExistingUser(email, password).observe(this, Observer {
+        val observer = Observer<Boolean> {
             if (it){
-                // to welcome page
+                startActivity(Intent(this, SplashWelcomeActivity::class.java))
                 viewModel.getCurrentUser()
             } else {
                 Toast.makeText(this, resources.getString(R.string.sign_in_email_pass_error), Toast.LENGTH_SHORT).show()
             }
-        })
+        }
+        viewModel.signInExistingUser(email, password, observer)
     }
 
     fun getActivityInstance(): Activity{

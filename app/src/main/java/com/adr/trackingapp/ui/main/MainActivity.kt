@@ -22,6 +22,8 @@ import com.adr.trackingapp.R
 import com.adr.trackingapp.data.model.HistoryEntity
 import com.adr.trackingapp.utils.Converter
 import com.adr.trackingapp.ui.viewmodel.HistoryViewModel
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import com.mapbox.android.core.location.*
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
@@ -73,6 +75,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     private var mapPreview: ByteArray? = null
     private var stopTime = 0L
     private var isFabExpanded = false
+    private val auth = Firebase.auth
 
     var arrayCoordinate: ArrayList<Point> = ArrayList()
     var map: MapboxMap? = null
@@ -135,23 +138,34 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
             startActivity(Intent(this, HistoryRunningActivity::class.java))
             finish()
         }
-    }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        val menuInflater = menuInflater
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        //TODO add 1 menu
-        when (item.itemId) {
-            R.id.history -> {
-                startActivity(Intent(this, HistoryRunningActivity::class.java))
-            }
+        fab_main_to_logout.setOnClickListener {
+            auth.signOut()
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
         }
-        return super.onOptionsItemSelected(item)
     }
+
+//    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+//        val menuInflater = menuInflater
+//        menuInflater.inflate(R.menu.main_menu, menu)
+//        return true
+//    }
+//
+//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+//        //TODO add 1 menu
+//        when (item.itemId) {
+//            R.id.history -> {
+//                startActivity(Intent(this, HistoryRunningActivity::class.java))
+//            }
+//            R.id.logout -> {
+//                auth.signOut()
+//                startActivity(Intent(this, LoginActivity::class.java))
+//                finish()
+//            }
+//        }
+//        return super.onOptionsItemSelected(item)
+//    }
 
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.map = mapboxMap
@@ -330,7 +344,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
 
     private fun enableLocation() {
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
-            //do some stuff
+            // do some stuff
         } else {
             permissionManager = PermissionsManager(this)
             permissionManager.requestLocationPermissions(this)
@@ -419,6 +433,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         permissionManager.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
@@ -426,6 +441,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         ViewCompat.animate(fab_mainactivity).rotation(180.0f).withLayer().setDuration(300)
             .start()
         val openAnim = AnimationUtils.loadAnimation(this, R.anim.open_fab_anim)
+        ll_logout.startAnimation(openAnim)
         ll_history.startAnimation(openAnim)
         isFabExpanded = true
     }
@@ -434,6 +450,7 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
         ViewCompat.animate(fab_mainactivity).rotation(0.0f).withLayer().setDuration(300)
             .start()
         val closeAnim = AnimationUtils.loadAnimation(this, R.anim.close_fab_anim)
+        ll_logout.startAnimation(closeAnim)
         ll_history.startAnimation(closeAnim)
         isFabExpanded = false
     }
@@ -459,33 +476,3 @@ class MainActivity : AppCompatActivity(), PermissionsListener, OnMapReadyCallbac
     }
 
 }
-
-//private class MainActivityCallback(activity: MainActivity) :
-//    LocationEngineCallback<LocationEngineResult> {
-//    private val activityWeakReference: WeakReference<MainActivity> = WeakReference(activity)
-//
-//    override fun onFailure(exception: Exception) {
-//        val activity = activityWeakReference.get()
-//        if (activity != null) {
-//            Toast.makeText(activity, exception.localizedMessage, Toast.LENGTH_SHORT).show()
-//        }
-//    }
-//
-//    override fun onSuccess(result: LocationEngineResult?) {
-//        val activity = activityWeakReference.get()
-//        if (activity != null) {
-//            val location = result?.lastLocation ?: return
-//
-//            if (result.lastLocation != null) {
-//                val longitude = result.lastLocation?.longitude!!.toDouble()
-//                val latitude = result.lastLocation?.latitude!!.toDouble()
-//                Log.d(
-//                    MainActivity::class.java.simpleName,
-//                    "longitude : $longitude, latitude : $latitude"
-//                )
-//                activity.arrayCoordinate.add(Point.fromLngLat(longitude, latitude))
-//            }
-//        }
-//    }
-//
-//}

@@ -36,28 +36,28 @@ class LoginActivityViewModel: ViewModel() {
         return false
     }
 
-    fun signInExistingUser(email: String, password: String): MutableLiveData<Boolean>{
-        var isSuccessful: MutableLiveData<Boolean> = MutableLiveData(false)
-        repo.signInExistingUser(email, password, auth).subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread()).subscribe(object : Observer<Boolean>{
-                override fun onSubscribe(d: Disposable) {
-                    compositeDisposable.add(d)
-                }
+    fun signInExistingUser(email: String, password: String, observer: androidx.lifecycle.Observer<Boolean>){
 
-                override fun onNext(t: Boolean) {
-                    isSuccessful = MutableLiveData(t)
-                }
+        val signInObserver = object : Observer<Boolean>{
+            override fun onSubscribe(d: Disposable) {
+                compositeDisposable.add(d)
+            }
 
-                override fun onError(e: Throwable) {
-                    TODO("Not yet implemented")
-                }
+            override fun onNext(t: Boolean) {
+                observer.onChanged(t)
+            }
 
-                override fun onComplete() {
-                    TODO("Not yet implemented")
-                }
+            override fun onError(e: Throwable) {
 
-            })
-        return isSuccessful
+            }
+
+            override fun onComplete() {
+
+            }
+
+        }
+
+        repo.signInExistingUser(email, password, auth, signInObserver)
     }
 
     fun getCurrentUser(): FirebaseUser{

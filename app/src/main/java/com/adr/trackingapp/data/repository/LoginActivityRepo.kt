@@ -6,6 +6,8 @@ import com.adr.trackingapp.ui.main.LoginActivity
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.auth.FirebaseAuth
 import io.reactivex.Observable
+import io.reactivex.Observer
+import io.reactivex.subjects.PublishSubject
 
 class LoginActivityRepo: ILoginActivityRepo {
     
@@ -15,14 +17,18 @@ class LoginActivityRepo: ILoginActivityRepo {
         this.activity = activity
     }
 
-    override fun signInExistingUser(email: String, password: String, auth: FirebaseAuth):
-            Observable<Boolean> {
-        var isSuccessful = false
+    override fun signInExistingUser(email: String, password: String, auth: FirebaseAuth,
+                                    observer: Observer<Boolean>) {
         auth.signInWithEmailAndPassword(email, password).addOnCompleteListener(activity) {
             if (it.isSuccessful){
-                isSuccessful = true
+                observer.onNext(true)
+            } else {
+                observer.onNext(false)
+            }
+
+            if (it.isComplete){
+                observer.onComplete()
             }
         }
-        return Observable.just(isSuccessful)
     }
 }

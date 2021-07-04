@@ -1,6 +1,7 @@
 package com.adr.trackingapp.ui.main
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -127,6 +128,8 @@ class RegistrationActivity : AppCompatActivity() {
             .observe(this, Observer {
             if (it){
                 // to welcome page
+                startActivity(Intent(this, SplashWelcomeActivity::class.java))
+                finish()
             } else {
                 Toast.makeText(this, resources.getString(R.string.sign_up_error), Toast.LENGTH_SHORT).show()
             }

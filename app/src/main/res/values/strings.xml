@@ -24,4 +24,5 @@
     <string name="username_regis_empty_error">Username could not be empty</string>
     <string name="e_mail_regis_empty_error">E-mail could not be empty</string>
     <string name="password_regis_empty_error">Password could not be empty</string>
+    <string name="welcome_caps">WELCOME</string>
 </resources>

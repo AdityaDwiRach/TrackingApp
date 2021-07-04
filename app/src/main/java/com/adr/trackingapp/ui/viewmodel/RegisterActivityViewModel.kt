@@ -2,11 +2,11 @@ package com.adr.trackingapp.ui.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.MutableLiveData
-import com.adr.trackingapp.data.repository.LoginActivityRepo
 import com.adr.trackingapp.data.repository.RegisterActivityRepo
-import com.adr.trackingapp.ui.main.LoginActivity
 import com.adr.trackingapp.ui.main.RegistrationActivity
 import com.adr.trackingapp.utils.SessionManager
+import com.adr.trackingapp.utils.SessionManager.Companion.USERNAME
+import com.adr.trackingapp.utils.SessionManagerEnum
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -53,6 +53,7 @@ class RegisterActivityViewModel {
 
             })
 
+        sessionManager.setEncryptedPref(SessionManagerEnum.STRING, USERNAME, userName)
         return isSuccessful
     }
 }

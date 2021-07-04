@@ -13,11 +13,12 @@
         android:visibility="gone"
         app:mapbox_cameraZoom="12" />
 
+
     <LinearLayout
         android:id="@+id/ll_history"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_above="@id/fab_mainactivity"
+        android:layout_above="@id/ll_logout"
         android:layout_alignEnd="@id/fab_mainactivity"
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="16dp"
@@ -37,6 +38,33 @@
             android:layout_height="wrap_content"
             app:fabSize="mini"
             app:srcCompat="@drawable/ic_history" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_logout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/fab_mainactivity"
+        android:layout_alignEnd="@id/fab_mainactivity"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="16dp"
+        android:orientation="horizontal"
+        android:visibility="invisible">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginEnd="16dp"
+            android:text="Logout" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_main_to_logout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:fabSize="mini"
+            app:srcCompat="@drawable/ic_logout" />
 
     </LinearLayout>
 
